@@ -2037,6 +2037,11 @@ def main():
                 print(Fore.GREEN + "49. S4 Tote Centre Timeout" + Style.RESET_ALL)
                 print(Fore.GREEN + "50. Store Parameter" + Style.RESET_ALL)
                 print(Fore.GREEN + "51. PLC Load Presence Feedback Update Time" + Style.RESET_ALL)
+                print(Fore.GREEN + "55. Set MQTT Broker IP" + Style.RESET_ALL)
+                print(Fore.GREEN + "57. Set MQTT Broker Port" + Style.RESET_ALL)
+                print(Fore.GREEN + "58. Set REquest Topic" + Style.RESET_ALL)
+                print(Fore.GREEN + "59. Set Responce Topic" + Style.RESET_ALL)
+                print(Fore.GREEN + "56. Enable Tote Tracking" + Style.RESET_ALL)
 
                 cmd_type = int(input(Fore.CYAN + "Enter Config Command (e.g., 1 for In/Out): " + Style.RESET_ALL))
                 param_list = None
