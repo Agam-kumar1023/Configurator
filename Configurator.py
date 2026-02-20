@@ -116,6 +116,12 @@ CMD_SET_MQTT_BROKER_IP					= 0x37
 CMD_SET_MQTT_BROKER_PORT				= 0x39
 CMD_SET_REQUEST_TOPIC					= 0x3A
 CMD_SET_RESPONSE_TOPIC					= 0x3B
+CMD_S1_ALTERNATE_OUT_DIRECTION          = 0x3E
+CMD_S2_ALTERNATE_OUT_DIRECTION          = 0x3F
+CMD_S3_ALTERNATE_OUT_DIRECTION          = 0x40
+CMD_S4_ALTERNATE_OUT_DIRECTION          = 0x41
+CMD_FORCE_DIVERSION_TIMEOUT				= 0x42
+CMD_FORCE_DIVERSION_ENABLE  			= 0x43
 
 RESP_TYPE_POP_CHECK_RESPONSE	= 0x8A
 RESP_TYPE_HEALTH_CHECK			= 0x8B
@@ -527,6 +533,12 @@ def parse_system_code(system_code):
             "57": "Set MQTT Broker Port",
             "58": "Set Request Topic",
             "59": "Set Response Topic",
+            "62": "S1 Alternate Out Direction",
+            "63": "S2 Alternate Out Direction",
+            "64": "S3 Alternate Out Direction",
+            "65": "S4 Alternate Out Direction",
+            "66": "Force Diversion Timeout",
+            "67": "Force Diversion Enable",
         }
 
         # Interpret additional data
@@ -601,6 +613,13 @@ def parse_system_code(system_code):
             print(f"{command_types.get(command_type, 'Unknown')}: {additional_data}")
         elif command_type == "59":  # Set Response Topic
             print(f"{command_types.get(command_type, 'Unknown')}: {additional_data}")
+        elif command_type == "66":  # Force Diversion Timeout
+            print(f"{command_types.get(command_type, 'Unknown')}: {int(additional_data, 16)} ms")
+        elif command_type == "67":  # Force Diversion Enable
+            value_decimal = int(additional_data, 16)
+            print(f"{command_types.get(command_type, 'Unknown')}: {value_decimal} ({'Enable' if value_decimal == 1 else 'Disable'})")
+        elif command_type in ["62", "63", "64", "65"]:  # S1-S4 Alternate Out Direction
+           print(f"{command_types.get(command_type, 'Unknown')}: {additional_data}")
         else:
             print(f"[x] Unknown command type: {command_type}")
     elif response_type == f"{CMD_TYPE_CHECK_PARAM_RESPONSE:02X}":
@@ -1799,6 +1818,12 @@ def main():
         CMD_SET_REQUEST_TOPIC: "Set Request Topic",
         CMD_SET_RESPONSE_TOPIC: "Set Response Topic",
         CMD_ENABLE_TOTE_TRACKING: "Enable Tote Tracking",
+        CMD_S1_ALTERNATE_OUT_DIRECTION: "S1 Alternate Out Direction",
+        CMD_S2_ALTERNATE_OUT_DIRECTION: "S2 Alternate Out Direction",
+        CMD_S3_ALTERNATE_OUT_DIRECTION: "S3 Alternate Out Direction",
+        CMD_S4_ALTERNATE_OUT_DIRECTION: "S4 Alternate Out Direction",
+        CMD_FORCE_DIVERSION_TIMEOUT: "Force Diversion Timeout",
+        CMD_FORCE_DIVERSION_ENABLE: "Force Diversion Enable",
     }
 
     # === Motor Parameter Handlers ===
@@ -2042,6 +2067,12 @@ def main():
                 print(Fore.GREEN + "58. Set REquest Topic" + Style.RESET_ALL)
                 print(Fore.GREEN + "59. Set Responce Topic" + Style.RESET_ALL)
                 print(Fore.GREEN + "56. Enable Tote Tracking" + Style.RESET_ALL)
+                print(Fore.GREEN + "62. S1 Alternate Out Direction" + Style.RESET_ALL)
+                print(Fore.GREEN + "63. S2 Alternate Out Direction" + Style.RESET_ALL)
+                print(Fore.GREEN + "64. S3 Alternate Out Direction" + Style.RESET_ALL)
+                print(Fore.GREEN + "65. S4 Alternate Out Direction" + Style.RESET_ALL)
+                print(Fore.GREEN + "66. Force Diversion Timeout" + Style.RESET_ALL)
+                print(Fore.GREEN + "67. Force Diversion Enable" + Style.RESET_ALL)
 
                 cmd_type = int(input(Fore.CYAN + "Enter Config Command (e.g., 1 for In/Out): " + Style.RESET_ALL))
                 param_list = None
@@ -2122,6 +2153,12 @@ def main():
                     CMD_SET_REQUEST_TOPIC: "Set Request Topic",
                     CMD_SET_RESPONSE_TOPIC: "Set Response Topic",
                     CMD_ENABLE_TOTE_TRACKING: "Enable Tote Tracking",
+                    CMD_S1_ALTERNATE_OUT_DIRECTION: "S1 Alternate Out Direction",
+                    CMD_S2_ALTERNATE_OUT_DIRECTION: "S2 Alternate Out Direction",
+                    CMD_S3_ALTERNATE_OUT_DIRECTION: "S3 Alternate Out Direction",
+                    CMD_S4_ALTERNATE_OUT_DIRECTION: "S4 Alternate Out Direction",
+                    CMD_FORCE_DIVERSION_TIMEOUT: "Force Diversion Timeout",
+                    CMD_FORCE_DIVERSION_ENABLE: "Force Diversion Enable",
                 }
 
                 for cmd_type, handler in cmd_handlers.items():
