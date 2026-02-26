@@ -1738,7 +1738,7 @@ def main():
         ),
         CMD_S4_TOTE_CENTRE_TIMEOUT: lambda: get_validated_input(
             "Enter S4 Tote Centre Timeout (0 : 65535): ",
-            valid_range=range(0, 6553*6)
+            valid_range=range(0, 65536)
         ),
         CMD_STORE_PARAMETER: lambda: get_validated_input(
             "Enter Store Parameter (0: Disable, 1: Enable): ",
@@ -1758,7 +1758,15 @@ def main():
         CMD_ENABLE_TOTE_TRACKING: lambda: get_validated_input(
             "Enter Tote Tracking Mode (0: Disable, 1: CAN, 2: Ethernet): ",
             valid_range=range(0, 3)
-        )  
+        ),
+        CMD_FORCE_DIVERSION_TIMEOUT: lambda: get_validated_input(
+            "Enter Force Diversion Timeout (0 : 65535): ",
+            valid_range=range(0, 65536)
+        ),
+        CMD_FORCE_DIVERSION_ENABLE: lambda: get_validated_input(
+            "Enter Force Diversion Enable (0: Disable, 1: Enable): ",
+            valid_range=range(0, 2)
+        )
     }
 
     cmd_descriptions = {
