@@ -619,7 +619,9 @@ def parse_system_code(system_code):
             value_decimal = int(additional_data, 16)
             print(f"{command_types.get(command_type, 'Unknown')}: {value_decimal} ({'Enable' if value_decimal == 1 else 'Disable'})")
         elif command_type in ["62", "63", "64", "65"]:  # S1-S4 Alternate Out Direction
-           print(f"{command_types.get(command_type, 'Unknown')}: {additional_data}")
+            # interpret the hex value as decimal so users see a numeric value
+            value_decimal = int(additional_data, 16)
+            print(f"{command_types.get(command_type, 'Unknown')}: {value_decimal}")
         else:
             print(f"[x] Unknown command type: {command_type}")
     elif response_type == f"{CMD_TYPE_CHECK_PARAM_RESPONSE:02X}":
