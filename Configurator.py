@@ -1761,6 +1761,22 @@ def main():
             "Enter Tote Tracking Mode (0: Disable, 1: CAN, 2: Ethernet): ",
             valid_range=range(0, 3)
         ),
+         CMD_S1_ALTERNATE_OUT_DIRECTION: lambda: get_validated_input(
+            "Enter S1 Alternate Output Direction (0: Disable, 1: Enable): ",
+            valid_range=range(0, 4)
+        ),
+        CMD_S2_ALTERNATE_OUT_DIRECTION: lambda: get_validated_input(
+            "Enter S2 Alternate Output Direction (0: Disable, 1: Enable): ",
+            valid_range=range(0, 4)
+        ),
+        CMD_S3_ALTERNATE_OUT_DIRECTION: lambda: get_validated_input(
+            "Enter S3 Alternate Output Direction (0: Disable, 1: Enable): ",
+            valid_range=range(0, 4)
+        ),
+        CMD_S4_ALTERNATE_OUT_DIRECTION: lambda: get_validated_input(
+            "Enter S4 Alternate Output Direction (0: Disable, 1: Enable): ",
+            valid_range=range(0, 4)
+        ),
         CMD_FORCE_DIVERSION_TIMEOUT: lambda: get_validated_input(
             "Enter Force Diversion Timeout (0 : 65535): ",
             valid_range=range(0, 65536)
