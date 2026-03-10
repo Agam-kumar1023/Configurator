@@ -133,6 +133,8 @@ RESP_POP_UP_ANY_ERROR			= 0x01
 RESP_POP_UP_CRATE_JAM_ERROR		= 0x02
 CMD_SET_BOOT_MODE				= 0x65
 CMD_CHECK_DIVERT_X_ERROR        = 0x01
+CMD_MQTT_SCADA_REQUEST_TOPIC    = 0x3C
+CMD_MQTT_SCADA_RESPONSE_TOPIC	= 0x3D
 
 
 # === Tri-Motor Variables ===
@@ -640,6 +642,8 @@ def parse_system_code(system_code):
             "57": "Set MQTT Broker Port",
             "58": "Set Request Topic",
             "59": "Set Response Topic",
+            "60": "Set MQTT SCADA Request Topic",
+            "61": "Set MQTT SCADA Response Topic",
             "62": "S1 Alternate Out Direction",
             "63": "S2 Alternate Out Direction",
             "64": "S3 Alternate Out Direction",
@@ -719,6 +723,10 @@ def parse_system_code(system_code):
         elif command_type == "58":  # Set Request Topic
             print(f"{command_types.get(command_type, 'Unknown')}: {additional_data}")
         elif command_type == "59":  # Set Response Topic
+            print(f"{command_types.get(command_type, 'Unknown')}: {additional_data}")
+        elif command_type == "60":  # Set MQTT SCADA Request Topic
+            print(f"{command_types.get(command_type, 'Unknown')}: {additional_data}")
+        elif command_type == "61":  # Set MQTT SCADA Response Topic
             print(f"{command_types.get(command_type, 'Unknown')}: {additional_data}")
         elif command_type == "66":  # Force Diversion Timeout
             print(f"{command_types.get(command_type, 'Unknown')}: {int(additional_data, 16)} ms")
@@ -1957,6 +1965,8 @@ def main():
         CMD_SET_MQTT_BROKER_PORT: "Set MQTT Broker Port",
         CMD_SET_REQUEST_TOPIC: "Set Request Topic",
         CMD_SET_RESPONSE_TOPIC: "Set Response Topic",
+        CMD_MQTT_SCADA_REQUEST_TOPIC: "MQTT SCADA Request Topic",
+        CMD_MQTT_SCADA_RESPONSE_TOPIC: "MQTT SCADA Response Topic",
         CMD_ENABLE_TOTE_TRACKING: "Enable Tote Tracking",
         CMD_S1_ALTERNATE_OUT_DIRECTION: "S1 Alternate Out Direction",
         CMD_S2_ALTERNATE_OUT_DIRECTION: "S2 Alternate Out Direction",
@@ -2203,10 +2213,12 @@ def main():
                 print(Fore.GREEN + "50. Store Parameter" + Style.RESET_ALL)
                 print(Fore.GREEN + "51. PLC Load Presence Feedback Update Time" + Style.RESET_ALL)
                 print(Fore.GREEN + "55. Set MQTT Broker IP" + Style.RESET_ALL)
-                print(Fore.GREEN + "57. Set MQTT Broker Port" + Style.RESET_ALL)
-                print(Fore.GREEN + "58. Set REquest Topic" + Style.RESET_ALL)
-                print(Fore.GREEN + "59. Set Responce Topic" + Style.RESET_ALL)
                 print(Fore.GREEN + "56. Enable Tote Tracking" + Style.RESET_ALL)
+                print(Fore.GREEN + "57. Set MQTT Broker Port" + Style.RESET_ALL)
+                print(Fore.GREEN + "58. Set Request Topic" + Style.RESET_ALL)
+                print(Fore.GREEN + "59. Set Response Topic" + Style.RESET_ALL)
+                print(Fore.GREEN + "60. MQTT SCADA Request Topic" + Style.RESET_ALL)
+                print(Fore.GREEN + "61. MQTT SCADA Response Topic" + Style.RESET_ALL)
                 print(Fore.GREEN + "62. S1 Alternate Out Direction" + Style.RESET_ALL)
                 print(Fore.GREEN + "63. S2 Alternate Out Direction" + Style.RESET_ALL)
                 print(Fore.GREEN + "64. S3 Alternate Out Direction" + Style.RESET_ALL)
@@ -2419,6 +2431,8 @@ def main():
                     CMD_SET_MQTT_BROKER_PORT: "Set MQTT Broker Port",
                     CMD_SET_REQUEST_TOPIC: "Set Request Topic",
                     CMD_SET_RESPONSE_TOPIC: "Set Response Topic",
+                    CMD_MQTT_SCADA_REQUEST_TOPIC: "Set MQTT SCADA Request Topic",
+                    CMD_MQTT_SCADA_RESPONSE_TOPIC: "Set MQTT SCADA Response Topic",
                     CMD_ENABLE_TOTE_TRACKING: "Enable Tote Tracking",
                     CMD_S1_ALTERNATE_OUT_DIRECTION: "S1 Alternate Out Direction",
                     CMD_S2_ALTERNATE_OUT_DIRECTION: "S2 Alternate Out Direction",
