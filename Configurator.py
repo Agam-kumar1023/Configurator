@@ -1,3 +1,4 @@
+import re
 import socket
 import json
 import os
@@ -515,9 +516,31 @@ def parse_system_code(system_code):
                             return
                 except (ValueError, json.JSONDecodeError):
                     pass
+
+            # Normalize common hex formatting (spaces, colons, dashes) so we can
+            # parse responses like "0a 35 01 12" or "0a:35:01:12".
+            if isinstance(system_code, str) and re.match(r"^[0-9A-Fa-f\s:.-]+$", system_code):
+                system_code = re.sub(r"[^0-9A-Fa-f]", "", system_code)
     except Exception:
         # Ignore failures here; fall back to existing parsing logic.
         pass
+
+    # Some devices embed the firmware response inside a longer string.
+    # If we can locate the 0x8A 0x35 opcode sequence, try parsing firmware from it.
+    if isinstance(system_code, str):
+        match = re.search(r"(?:8a35|0a35)([0-9a-fA-F]{4})", system_code)
+        if match:
+            fw_hex = match.group(1)
+            try:
+                fw_value = int(fw_hex, 16)
+                major = (fw_value >> 8) & 0xFF
+                minor_byte = fw_value & 0xFF
+                # Interpret the minor byte as BCD digits (0x12 -> 12)
+                minor = (minor_byte >> 4) * 10 + (minor_byte & 0x0F)
+                print(f"Firmware Version: {major}.{minor}")
+                return
+            except ValueError:
+                pass
 
     if len(system_code) < 12:
         print("[x] SYSTEM_CODE is too short to parse.")
@@ -531,17 +554,30 @@ def parse_system_code(system_code):
 
     # Some devices return a firmware version response encoded as 0x8A 0x35
     # and we may not always map 0x35 to the correct command type in our dict.
+    # Some devices even return response type 0x0A but still include the 0x35 command.
+    firmware_candidate = None
     if response_type == f"{RESP_TYPE_POP_CHECK_RESPONSE:02X}" and system_code[4:8].lower() == "8a35":
-        # additional_data should contain the version bytes (major/minor)
-        if len(additional_data) >= 4:
-            fw_value = int(additional_data[0:4], 16)
-            major = (fw_value >> 8) & 0xFF
-            minor = fw_value & 0xFF
-            print(f"Firmware Version: {major}.{minor}")
-            return
+        firmware_candidate = additional_data
+    elif response_type == "0A" and command_type == str(CMD_CHECK_DIVERT_X_FIRMWARE_VERSION):
+        # Treat 0x0A response as a firmware version response when the command is 0x35
+        firmware_candidate = additional_data
+        print(Fore.YELLOW + "[!] Treating response type 0x0A as firmware version response." + Style.RESET_ALL)
 
-    if response_type == f"{RESP_TYPE_POP_CHECK_RESPONSE:02X}":
-        # Some devices use 0x35 (decimal 53) to report firmware version
+    if firmware_candidate:
+        # Firmware version is encoded as 2 bytes (major/minor). Use the last 2 bytes of the payload.
+        if len(firmware_candidate) >= 4:
+            fw_hex = firmware_candidate[-4:]
+            try:
+                fw_value = int(fw_hex, 16)
+                major = (fw_value >> 8) & 0xFF
+                minor_byte = fw_value & 0xFF
+                # Interpret the minor byte as BCD digits (0x12 -> 12)
+                minor = (minor_byte >> 4) * 10 + (minor_byte & 0x0F)
+                print(f"Firmware Version: {major}.{minor}")
+                return
+            except ValueError:
+                pass
+
         # Align it with the existing firmware-version handling.
         if command_type == str(CMD_CHECK_DIVERT_X_FIRMWARE_VERSION):
             command_type = str(CMD_CHECK_FIRMWARE_VERSION)
@@ -813,8 +849,15 @@ def parse_system_code(system_code):
                         print(f"{command_types.get(command_type, 'Unknown')}: {int(additional_data[0:2], 16)}")
                 else:
                     if (command_type == str(CMD_CHECK_FIRMWARE_VERSION) or command_type == str(CMD_CHECK_DIVERT_X_FIRMWARE_VERSION)):
-                        firmware_version = int(additional_data[0:2], 16)
-                        print(f"{command_types.get(command_type, 'Unknown')}: {((firmware_version & 0xFF00)>> 8)}.{(firmware_version & 0x00FF)}")
+                        # Firmware version is encoded as 2 bytes (major/minor). Take the last 2 bytes of the response.
+                        fw_hex = additional_data[-4:]
+                        try:
+                            firmware_version = int(fw_hex, 16)
+                            major = (firmware_version >> 8) & 0xFF
+                            minor = firmware_version & 0xFF
+                            print(f"{command_types.get(command_type, 'Unknown')}: {major}.{minor}")
+                        except ValueError:
+                            print(f"{command_types.get(command_type, 'Unknown')}: Could not parse firmware version from '{additional_data}'")
                     else:
                         print(f"{command_types[command_type]}: {int(additional_data, 16)}")
             else:
@@ -2193,6 +2236,46 @@ def main():
                 print(Fore.YELLOW + "\n[?] Checking firmware version..." + Style.RESET_ALL)
                 command = generate_command_with_flexibility(0, 0, None, CMD_CHECK_DIVERT_X_FIRMWARE_VERSION, decesion_type)
                 send_can_command(sock, command)
+
+                 # Wait for and parse the response
+                try:
+                    sock.settimeout(5)
+                    response = sock.recv(4096)
+                except socket.timeout:
+                    print(Fore.RED + "[x] No response received. The server might be busy or unresponsive." + Style.RESET_ALL)
+                    continue
+
+                if not response:
+                    print(Fore.RED + "[x] Empty response received." + Style.RESET_ALL)
+                    continue
+
+                # Try to decode as UTF-8 (JSON or plain text). If it isn't JSON, treat it as raw hex.
+                try:
+                    text = response.decode("utf-8", errors="ignore").strip()
+                    # If we get JSON text, parse and extract SYSTEM_CODE
+                    if text.startswith("{"):
+                        data = json.loads(text)
+                        system_code = (
+                            data.get("SYSTEM_CODE")
+                            or data.get("SYSTEMCODE")
+                            or data.get("system_code")
+                            or data.get("systemcode")
+                        )
+                        if system_code:
+                            print("Parsed SYSTEM_CODE from JSON response:", system_code)
+                            parse_system_code(system_code)
+                            continue
+                        else:
+                            print(Fore.RED + "[x] JSON response did not contain SYSTEM_CODE." + Style.RESET_ALL)
+                            continue
+                    # Otherwise, the raw response is probably already hex
+                    system_code = text if all(c in "0123456789abcdefABCDEF" for c in text) else response.hex()
+                except Exception:
+                    system_code = response.hex()
+
+                print("RAW RESPONSE:", system_code)
+                parse_system_code(system_code)
+
 
                 # Wait for and parse the response
                 try:
