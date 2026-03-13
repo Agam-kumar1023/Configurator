@@ -2237,6 +2237,48 @@ def main():
                 command = generate_command_with_flexibility(0, 0, None, CMD_CHECK_DIVERT_X_FIRMWARE_VERSION, decesion_type)
                 send_can_command(sock, command)
 
+                
+                 # Wait for and parse the response
+                try:
+                    sock.settimeout(5)
+                    response = sock.recv(4096)
+                except socket.timeout:
+                    print(Fore.RED + "[x] No response received. The server might be busy or unresponsive." + Style.RESET_ALL)
+                    continue
+
+                if not response:
+                    print(Fore.RED + "[x] Empty response received." + Style.RESET_ALL)
+                    continue
+
+                # Try to decode as UTF-8 (JSON or plain text). If it isn't JSON, treat it as raw hex.
+                try:
+                    text = response.decode("utf-8", errors="ignore").strip()
+                    # If we get JSON text, parse and extract SYSTEM_CODE
+                    if text.startswith("{"):
+                        data = json.loads(text)
+                        system_code = (
+                            data.get("SYSTEM_CODE")
+                            or data.get("SYSTEMCODE")
+                            or data.get("system_code")
+                            or data.get("systemcode")
+                        )
+                        if system_code:
+                            print("Parsed SYSTEM_CODE from JSON response:", system_code)
+                            parse_system_code(system_code)
+                            continue
+                        else:
+                            print(Fore.RED + "[x] JSON response did not contain SYSTEM_CODE." + Style.RESET_ALL)
+                            continue
+                    # Otherwise, the raw response is probably already hex
+                    system_code = text if all(c in "0123456789abcdefABCDEF" for c in text) else response.hex()
+                except Exception:
+                    system_code = response.hex()
+
+                print("RAW RESPONSE:", system_code)
+                parse_system_code(system_code)
+
+
+
                  # Wait for and parse the response
                 try:
                     sock.settimeout(5)
