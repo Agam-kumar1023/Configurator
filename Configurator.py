@@ -27,7 +27,8 @@ SELECTIONS = {
     15: "Conveyor Card: Health Check",
     16: "Configure Divert-X using Config File",
     17: "Exit",
-    18: "Configure Motor Parameters using Config File"
+    18: "Configure Motor Parameters using Config File",
+    19: "Check Divert-X Firmware Version"
 }
 
 SELECTION_SET_SINGLE_PARAM      = 1
@@ -48,6 +49,7 @@ SELECTION_CONVEYOR_CARD_HEALTH_CHECK = 15
 SELECTION_CONFIGURE_WITH_FILE = 16
 SELECTION_EXIT                  = 17
 SELECTION_CONFIGURE_MOTOR_WITH_FILE = 18
+SELECTION_CHECK_DIVERT_X_FIRMWARE_VERSION = 19
 
 CMD_TYPE_CHECK_CONFIG	        = 0x04
 CMD_TYPE_SET_CONFIG		        = 0x08
@@ -247,6 +249,9 @@ CMD_CHECK_PLC_MOTOR_CONTROL_STOP_TIME = 0x21
 CMD_CHECK_DELAY_SLUG_FREE_TIME        = 0x22
 CMD_CHECK_ERROR_SIGNAL_MODE           = 0x23
 CMD_CHECK_RESET_SIGNAL_MODE           = 0x24
+
+# === Checking Firmware Version ===
+CMD_CHECK_DIVERT_X_FIRMWARE_VERSION = 0x35
 
 # === Functions ===
 
@@ -2116,6 +2121,12 @@ def main():
                     send_can_command(sock, command)
                 else:
                     print(Fore.RED + "[x] Invalid parameters. Command not sent." + Style.RESET_ALL)
+
+            elif selection == SELECTION_CHECK_DIVERT_X_FIRMWARE_VERSION:    # Divert-X firmware version check
+                decesion_type = CMD_TYPE_CHECK_POP_UP_CONFIG
+                print(Fore.YELLOW + "\n[?] Checking firmware version..." + Style.RESET_ALL)
+                command = generate_command_with_flexibility(0, 0, None, CMD_CHECK_DIVERT_X_FIRMWARE_VERSION, decesion_type)
+                send_can_command(sock, command)
 
             elif selection == SELECTION_SET_ALL_PARAM:
                 decesion_type = CMD_TYPE_SET_POP_UP_CONFIG
