@@ -469,6 +469,56 @@ def generate_command_with_flexibility(conveyor_side, card_id, param, cmd_type, d
             return None
 
 def parse_system_code(system_code):
+    # Some devices return JSON over the socket; e.g.:
+    # {"IP":"...", "SYSTEM_CODE":"00008a350112", ...}
+    # In that case, some callers pass the raw hex dump of the JSON bytes.
+    # Detect this and extract the actual SYSTEM_CODE value.
+    try:
+        if isinstance(system_code, str):
+            trimmed = system_code.strip()
+
+            # If we got JSON text directly, parse it
+            if trimmed.startswith("{"):
+                try:
+                    data = json.loads(trimmed)
+                    system_code = (
+                        data.get("SYSTEM_CODE")
+                        or data.get("SYSTEMCODE")
+                        or data.get("system_code")
+                        or data.get("systemcode")
+                    )
+                    if system_code:
+                        print("Parsed SYSTEM_CODE from JSON response:", system_code)
+                    else:
+                        print(Fore.RED + "[x] JSON response did not contain SYSTEM_CODE." + Style.RESET_ALL)
+                        return
+                except json.JSONDecodeError:
+                    pass
+
+            # Otherwise, if it looks like hex, try decoding it to JSON first
+            elif len(trimmed) % 2 == 0:
+                try:
+                    raw = bytes.fromhex(trimmed)
+                    text = raw.decode("utf-8", errors="ignore").strip()
+                    if text.startswith("{"):
+                        data = json.loads(text)
+                        system_code = (
+                            data.get("SYSTEM_CODE")
+                            or data.get("SYSTEMCODE")
+                            or data.get("system_code")
+                            or data.get("systemcode")
+                        )
+                        if system_code:
+                            print("Parsed SYSTEM_CODE from JSON response:", system_code)
+                        else:
+                            print(Fore.RED + "[x] JSON response did not contain SYSTEM_CODE." + Style.RESET_ALL)
+                            return
+                except (ValueError, json.JSONDecodeError):
+                    pass
+    except Exception:
+        # Ignore failures here; fall back to existing parsing logic.
+        pass
+
     if len(system_code) < 12:
         print("[x] SYSTEM_CODE is too short to parse.")
         return
@@ -479,7 +529,23 @@ def parse_system_code(system_code):
     command_type = str(int(system_code[6:8].upper(), 16))  # Bytes 7–8 (convert to uppercase)
     additional_data = system_code[8:]  # Bytes 9 onward
 
+    # Some devices return a firmware version response encoded as 0x8A 0x35
+    # and we may not always map 0x35 to the correct command type in our dict.
+    if response_type == f"{RESP_TYPE_POP_CHECK_RESPONSE:02X}" and system_code[4:8].lower() == "8a35":
+        # additional_data should contain the version bytes (major/minor)
+        if len(additional_data) >= 4:
+            fw_value = int(additional_data[0:4], 16)
+            major = (fw_value >> 8) & 0xFF
+            minor = fw_value & 0xFF
+            print(f"Firmware Version: {major}.{minor}")
+            return
+
     if response_type == f"{RESP_TYPE_POP_CHECK_RESPONSE:02X}":
+        # Some devices use 0x35 (decimal 53) to report firmware version
+        # Align it with the existing firmware-version handling.
+        if command_type == str(CMD_CHECK_DIVERT_X_FIRMWARE_VERSION):
+            command_type = str(CMD_CHECK_FIRMWARE_VERSION)
+
         # Interpret command type
         command_types = {
             "1": "In/Out",
@@ -746,7 +812,7 @@ def parse_system_code(system_code):
                     else:
                         print(f"{command_types.get(command_type, 'Unknown')}: {int(additional_data[0:2], 16)}")
                 else:
-                    if (command_type == str(CMD_CHECK_FIRMWARE_VERSION)):
+                    if (command_type == str(CMD_CHECK_FIRMWARE_VERSION) or command_type == str(CMD_CHECK_DIVERT_X_FIRMWARE_VERSION)):
                         firmware_version = int(additional_data[0:2], 16)
                         print(f"{command_types.get(command_type, 'Unknown')}: {((firmware_version & 0xFF00)>> 8)}.{(firmware_version & 0x00FF)}")
                     else:
@@ -2127,6 +2193,45 @@ def main():
                 print(Fore.YELLOW + "\n[?] Checking firmware version..." + Style.RESET_ALL)
                 command = generate_command_with_flexibility(0, 0, None, CMD_CHECK_DIVERT_X_FIRMWARE_VERSION, decesion_type)
                 send_can_command(sock, command)
+
+                # Wait for and parse the response
+                try:
+                    sock.settimeout(5)
+                    response = sock.recv(4096)
+                except socket.timeout:
+                    print(Fore.RED + "[x] No response received. The server might be busy or unresponsive." + Style.RESET_ALL)
+                    continue
+
+                if not response:
+                    print(Fore.RED + "[x] Empty response received." + Style.RESET_ALL)
+                    continue
+
+                # Try to decode as UTF-8 (JSON or plain text). If it isn't JSON, treat it as raw hex.
+                try:
+                    text = response.decode("utf-8", errors="ignore").strip()
+                    # If we get JSON text, parse and extract SYSTEM_CODE
+                    if text.startswith("{"):
+                        data = json.loads(text)
+                        system_code = (
+                            data.get("SYSTEM_CODE")
+                            or data.get("SYSTEMCODE")
+                            or data.get("system_code")
+                            or data.get("systemcode")
+                        )
+                        if system_code:
+                            print("Parsed SYSTEM_CODE from JSON response:", system_code)
+                            parse_system_code(system_code)
+                            continue
+                        else:
+                            print(Fore.RED + "[x] JSON response did not contain SYSTEM_CODE." + Style.RESET_ALL)
+                            continue
+                    # Otherwise, the raw response is probably already hex
+                    system_code = text if all(c in "0123456789abcdefABCDEF" for c in text) else response.hex()
+                except Exception:
+                    system_code = response.hex()
+
+                print("RAW RESPONSE:", system_code)
+                parse_system_code(system_code)
 
             elif selection == SELECTION_SET_ALL_PARAM:
                 decesion_type = CMD_TYPE_SET_POP_UP_CONFIG
