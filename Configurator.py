@@ -27,7 +27,8 @@ SELECTIONS = {
     15: "Conveyor Card: Health Check",
     16: "Configure Divert-X using Config File",
     17: "Exit",
-    18: "Configure Motor Parameters using Config File"
+    18: "Configure Motor Parameters using Config File",
+    19: "Divert-X Firmware Version"
 }
 
 SELECTION_SET_SINGLE_PARAM      = 1
@@ -48,6 +49,7 @@ SELECTION_CONVEYOR_CARD_HEALTH_CHECK = 15
 SELECTION_CONFIGURE_WITH_FILE = 16
 SELECTION_EXIT                  = 17
 SELECTION_CONFIGURE_MOTOR_WITH_FILE = 18
+SELECTION_DIVERT_X_FIRMWARE_VERSION = 19
 
 CMD_TYPE_CHECK_CONFIG	        = 0x04
 CMD_TYPE_SET_CONFIG		        = 0x08
@@ -249,6 +251,9 @@ CMD_CHECK_PLC_MOTOR_CONTROL_STOP_TIME = 0x21
 CMD_CHECK_DELAY_SLUG_FREE_TIME        = 0x22
 CMD_CHECK_ERROR_SIGNAL_MODE           = 0x23
 CMD_CHECK_RESET_SIGNAL_MODE           = 0x24
+
+# === Firmware Version ===
+CMD_CHECK_DIVERT_X_FIRMWARE_VERSION = 0x35
 
 # === Functions ===
 
@@ -2224,6 +2229,34 @@ def main():
                                 print(Fore.RED + f"[x] Skipping {description} due to invalid input." + Style.RESET_ALL)
                         except Exception as e:
                             print(Fore.RED + f"[x] Error while processing {description}: {e}" + Style.RESET_ALL)
+
+             #Divert-X Firmware Version Check       
+            elif selection == SELECTION_DIVERT_X_FIRMWARE_VERSION:
+                print(Fore.YELLOW + "\n[?] Checking Divert-X Firmware Version..." + Style.RESET_ALL)
+                # Generate and send the command
+                send_can_command(sock, "00000b35")  # Using a fixed command for firmware version check
+
+                # Wait for a response
+                sock.settimeout(5)  # Set timeout to 5 seconds
+                response = sock.recv(1024).decode("utf-8").strip()    
+                # print(Fore.GREEN + f"[?] Received response: {response}" + Style.RESET_ALL)      
+                data = json.loads(response)
+
+                # Extract SYSTEM_CODE
+                system_code = data.get("SYSTEM_CODE", "")
+
+                if len(system_code) >= 4:
+                    # Get last 4 hex characters
+                    version_hex = system_code[-4:]
+
+                    # Split into Major and Minor
+                    major = int(version_hex[:2], 16)
+                    minor = int(version_hex[2:], 16)
+
+                    print(Fore.CYAN + f"[✓] Firmware Version: {major}.{minor}" + Style.RESET_ALL)
+                else:
+                    print(Fore.RED + "[!] Invalid SYSTEM_CODE received" + Style.RESET_ALL)
+
             elif selection == SELECTION_CHECK_SINGLE_PARAM:
                 decesion_type = CMD_TYPE_CHECK_POP_UP_CONFIG
                 print(Fore.YELLOW + "\n[?] Available Commands:" + Style.RESET_ALL)
